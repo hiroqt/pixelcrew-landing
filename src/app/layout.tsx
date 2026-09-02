@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Press_Start_2P, Space_Grotesk, JetBrains_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const pressStart2P = Press_Start_2P({
   weight: "400",
@@ -85,6 +87,8 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col bg-[var(--background)] text-[var(--foreground)] font-sans selection:bg-[#f59e0b] selection:text-[#07080c] transition-colors duration-150">
         <div className="grain-overlay" aria-hidden="true" />
         {children}
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

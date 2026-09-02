@@ -13,13 +13,30 @@ export function getAudioContext(): AudioContext | null {
     if (!sharedAudioCtx || sharedAudioCtx.state === 'closed') {
       sharedAudioCtx = new AudioCtx();
     }
-    if (sharedAudioCtx.state === 'suspended') {
-      sharedAudioCtx.resume().catch(() => {});
-    }
     return sharedAudioCtx;
   } catch {
     return null;
   }
+}
+
+// Ensure the audio context is unlocked on user gesture (required by Chrome/Safari autoplay policies)
+export function unlockAudioContext(): void {
+  if (typeof window === 'undefined') return;
+  const ctx = getAudioContext();
+  if (ctx && ctx.state === 'suspended') {
+    ctx.resume().catch(() => {});
+  }
+}
+
+// Attach one-time unlock listeners on the browser window
+if (typeof window !== 'undefined') {
+  const handleUnlock = () => {
+    unlockAudioContext();
+  };
+  window.addEventListener('pointerdown', handleUnlock, { once: true, capture: true, passive: true });
+  window.addEventListener('keydown', handleUnlock, { once: true, capture: true, passive: true });
+  window.addEventListener('touchstart', handleUnlock, { once: true, capture: true, passive: true });
+  window.addEventListener('click', handleUnlock, { once: true, capture: true, passive: true });
 }
 
 // Global audio preference state (defaults to true)
@@ -45,6 +62,7 @@ export function setAudioEnabled(enabled: boolean): void {
 }
 
 export function toggleAudioEnabled(): boolean {
+  unlockAudioContext();
   const next = !isAudioEnabled();
   setAudioEnabled(next);
   if (next) {
@@ -53,93 +71,100 @@ export function toggleAudioEnabled(): boolean {
   return next;
 }
 
-// Simple Web Audio API 8-bit chiptune sound generator for retro feedback
+// Web Audio API 8-bit chiptune sound generator for retro feedback
 export function playChiptuneSound(type: 'click' | 'select' | 'assemble' | 'success' | 'alert' | 'scroll' | 'blip') {
   if (typeof window === 'undefined') return;
   if (!isAudioEnabled()) return;
-  try {
-    const ctx = getAudioContext();
-    if (!ctx) return;
 
-    if (ctx.state === 'suspended') {
-      ctx.resume().catch(() => {});
-    }
+  const ctx = getAudioContext();
+  if (!ctx) return;
 
-    const now = ctx.currentTime;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
+  const runTone = () => {
+    try {
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
 
-    if (type === 'scroll') {
-      // Crisp 18ms tactile rotary tick
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(750, now);
-      osc.frequency.exponentialRampToValueAtTime(320, now + 0.018);
-      gain.gain.setValueAtTime(0.045, now);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.018);
+      // Connect graph before starting playback
       osc.connect(gain);
       gain.connect(ctx.destination);
-      osc.start(now);
-      osc.stop(now + 0.018);
-      return;
-    }
 
-    if (type === 'blip') {
-      // Gentle terminal teletype blip
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(920, now);
-      gain.gain.setValueAtTime(0.02, now);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.025);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(now);
-      osc.stop(now + 0.025);
-      return;
-    }
+      if (type === 'scroll') {
+        // Crisp 30ms tactile rotary tick
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(750, now);
+        osc.frequency.exponentialRampToValueAtTime(320, now + 0.03);
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.03);
+        osc.start(now);
+        osc.stop(now + 0.03);
+        return;
+      }
 
-    osc.type = type === 'assemble' ? 'sawtooth' : 'square';
+      if (type === 'blip') {
+        // Clear teletype terminal typewriter blip
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(920, now);
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.035);
+        osc.start(now);
+        osc.stop(now + 0.035);
+        return;
+      }
 
-    if (type === 'click') {
-      osc.frequency.setValueAtTime(440, now);
-      gain.gain.setValueAtTime(0.05, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-      osc.start(now);
-      osc.stop(now + 0.08);
-    } else if (type === 'select') {
-      osc.frequency.setValueAtTime(587.33, now);
-      osc.frequency.setValueAtTime(880, now + 0.05);
-      gain.gain.setValueAtTime(0.06, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-      osc.start(now);
-      osc.stop(now + 0.12);
-    } else if (type === 'assemble') {
-      osc.frequency.setValueAtTime(220, now);
-      osc.frequency.linearRampToValueAtTime(880, now + 0.25);
-      gain.gain.setValueAtTime(0.08, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-      osc.start(now);
-      osc.stop(now + 0.3);
-    } else if (type === 'success') {
-      osc.frequency.setValueAtTime(523.25, now);
-      osc.frequency.setValueAtTime(659.25, now + 0.08);
-      osc.frequency.setValueAtTime(783.99, now + 0.16);
-      osc.frequency.setValueAtTime(1046.50, now + 0.24);
-      gain.gain.setValueAtTime(0.08, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
-      osc.start(now);
-      osc.stop(now + 0.4);
-    } else if (type === 'alert') {
-      osc.frequency.setValueAtTime(300, now);
-      osc.frequency.setValueAtTime(150, now + 0.1);
-      gain.gain.setValueAtTime(0.08, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
-      osc.start(now);
-      osc.stop(now + 0.2);
+      osc.type = type === 'assemble' ? 'sawtooth' : 'square';
+
+      if (type === 'click') {
+        osc.frequency.setValueAtTime(480, now);
+        gain.gain.setValueAtTime(0.14, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+        osc.start(now);
+        osc.stop(now + 0.07);
+      } else if (type === 'select') {
+        osc.frequency.setValueAtTime(587.33, now);
+        osc.frequency.setValueAtTime(880, now + 0.05);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        osc.start(now);
+        osc.stop(now + 0.12);
+      } else if (type === 'assemble') {
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.linearRampToValueAtTime(880, now + 0.22);
+        gain.gain.setValueAtTime(0.16, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+        osc.start(now);
+        osc.stop(now + 0.28);
+      } else if (type === 'success') {
+        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.setValueAtTime(659.25, now + 0.08);
+        osc.frequency.setValueAtTime(783.99, now + 0.16);
+        osc.frequency.setValueAtTime(1046.50, now + 0.24);
+        gain.gain.setValueAtTime(0.16, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+        osc.start(now);
+        osc.stop(now + 0.38);
+      } else if (type === 'alert') {
+        osc.frequency.setValueAtTime(320, now);
+        osc.frequency.setValueAtTime(160, now + 0.09);
+        gain.gain.setValueAtTime(0.16, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+        osc.start(now);
+        osc.stop(now + 0.18);
+      }
+    } catch {
+      // ignore
     }
-    
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-  } catch {
-    // ignore audio errors if user interacted before context allowed
+  };
+
+  // If suspended, await resume resolution before starting oscillator so sound isn't dropped
+  if (ctx.state === 'suspended') {
+    ctx.resume().then(() => {
+      runTone();
+    }).catch(() => {
+      runTone();
+    });
+  } else {
+    runTone();
   }
 }
 

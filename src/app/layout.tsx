@@ -59,6 +59,15 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
+  },
+  icons: {
+    icon: [
+      { url: '/Pixelcrew_logo.png', type: 'image/png' },
+    ],
+    shortcut: '/Pixelcrew_logo.png',
+    apple: [
+      { url: '/Pixelcrew_logo.png', sizes: '180x180', type: 'image/png' },
+    ],
   }
 };
 

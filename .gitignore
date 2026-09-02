@@ -39,3 +39,20 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Build Caches & Workspace Temp
+node_modules/
+.vite/
+.next/
+.turbo/
+dist/
+build/
+*.log
+.pixel-temp/
+scratch/
+tmp/
+
+
+# Pixelcrew
+.agents
+.pixel-crew

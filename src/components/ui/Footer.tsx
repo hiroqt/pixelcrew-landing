@@ -57,7 +57,7 @@ export function Footer() {
               FAQ
             </Link>
             <a
-              href="https://github.com/arnelculum/PixelCrew"
+              href="https://github.com/hiroqt/PixelCrew"
               target="_blank"
               rel="noopener noreferrer"
               className="text-slate-400 hover:text-white text-theme-secondary hover:text-theme-primary transition-colors"

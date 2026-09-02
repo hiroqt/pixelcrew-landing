@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Check, Copy, ArrowRight } from 'lucide-react';
+import { Check, Copy, ArrowRight, Star } from 'lucide-react';
 import { GithubIcon } from '@/components/ui/GithubIcon';
 import { PixelWaveBackground } from '@/components/ui/PixelWaveBackground';
 import { PixelCrewBot } from '@/components/hero/PixelCrewBot';
@@ -79,13 +79,14 @@ export function Hero() {
           {/* GitHub star */}
           <div className="pt-1">
             <a
-              href="https://github.com/arnelculum/PixelCrew"
+              href="https://github.com/hiroqt/PixelCrew"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-xs text-slate-500 hover:text-slate-300 text-theme-muted hover:text-theme-secondary transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-white/[0.08] hover:border-white/[0.16] bg-white/[0.02] hover:bg-white/[0.06] text-xs text-slate-400 hover:text-white text-theme-muted hover:text-theme-primary transition-all group"
             >
               <GithubIcon className="w-4 h-4" />
               <span>Star on GitHub</span>
+              <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400/20 group-hover:fill-amber-400 transition-all ml-0.5" />
             </a>
           </div>
 

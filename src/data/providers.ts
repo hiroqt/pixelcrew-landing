@@ -76,5 +76,27 @@ export const PROVIDERS_DATA: PixelProvider[] = [
     color: '#10B981',
     description: 'Terminal-based coding agent leveraging OpenAI models for CLI command execution and synthesis.',
     features: ['Terminal Automation', 'Patch Verification', 'AST Code Synthesis']
+  },
+  {
+    id: 'grok',
+    name: 'xAI Grok',
+    vendor: 'xAI',
+    targetDir: '.grok/skills/',
+    adapterFile: 'src/adapters/generic.js',
+    icon: '⚡',
+    color: '#FFFFFF',
+    description: 'xAI Grok agentic coding integration supporting multi-agent swarms, deep reasoning, and system prompts.',
+    features: ['System Prompt Ingestion', 'Reasoning Mode', 'Agent Skills Auto-Load']
+  },
+  {
+    id: 'hermes',
+    name: 'Nous Hermes',
+    vendor: 'NousResearch',
+    targetDir: '.hermes/skills/',
+    adapterFile: 'src/adapters/generic.js',
+    icon: '🏛️',
+    color: '#38BDF8',
+    description: 'Advanced open-weights reasoning agent by NousResearch with native tool use and structured function calling.',
+    features: ['Function Calling', 'Local Inference Support', 'Open Spec Tooling']
   }
 ];

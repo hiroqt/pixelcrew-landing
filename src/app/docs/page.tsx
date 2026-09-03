@@ -37,7 +37,9 @@ import {
   GeminiCliIcon, 
   CodexIcon, 
   KiroIcon, 
-  OpenCodeIcon 
+  OpenCodeIcon,
+  GrokIcon,
+  HermesIcon 
 } from '@/components/ui/ToolIcons';
 
 /* ─────────────────────────────────────────────
@@ -123,6 +125,8 @@ const IDE_CONFIGS = [
   { name: 'Codex CLI', icon: CodexIcon, dir: '.agents/', file: 'AGENTS.md', desc: 'Reads AGENTS.md directly. All skills in .agents/skills/ are auto-discovered.' },
   { name: 'Kiro', icon: KiroIcon, dir: '.kiro/', file: 'AGENTS.md', desc: 'Reads AGENTS.md from .kiro/ or project root. Skills in .agents/skills/ are auto-loaded.' },
   { name: 'OpenCode', icon: OpenCodeIcon, dir: '.agents/', file: 'AGENTS.md', desc: 'Standard .agents/ directory layout with AGENTS.md and skills/ subdirectory.' },
+  { name: 'Grok', icon: GrokIcon, dir: '.grok/', file: 'AGENTS.md', desc: 'Reads AGENTS.md and loads skills from .agents/skills/ for xAI Grok agent tooling.' },
+  { name: 'Hermes', icon: HermesIcon, dir: '.hermes/', file: 'AGENTS.md', desc: 'NousResearch Hermes open-weights agent execution with function calling and .agents/ skills.' },
 ];
 
 /* ─────────────────────────────────────────────
@@ -382,7 +386,7 @@ export default function DocsPage() {
                   <p className="text-base text-slate-300 text-theme-secondary leading-relaxed">
                     PixelCrew is an autonomous multi-agent engineering swarm that orchestrates 9 specialized
                     AI agent personas across 23 commands to ship production-grade, high-craft software. It works
-                    natively with Antigravity, Claude Code, Cursor, Gemini CLI, Codex CLI, Kiro, and OpenCode — with
+                    natively with Antigravity, Claude Code, Cursor, Gemini CLI, Codex CLI, Kiro, OpenCode, Grok, and Hermes — with
                     zero runtime npm dependencies.
                   </p>
                 </div>
@@ -507,7 +511,7 @@ export default function DocsPage() {
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-emerald-400 mt-0.5">•</span>
-                      <span>Any supported AI coding IDE (Antigravity, Claude Code, Cursor, Gemini, Kiro, Codex)</span>
+                      <span>Any supported AI coding IDE or agent (Antigravity, Claude Code, Cursor, Gemini, Kiro, Codex, OpenCode, Grok, Hermes)</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-emerald-400 mt-0.5">•</span>

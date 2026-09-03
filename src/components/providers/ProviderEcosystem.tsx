@@ -21,7 +21,7 @@ export function ProviderEcosystem() {
           </h2>
 
           <p className="text-slate-300 font-sans text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
-            PixelCrew orchestrates canonical software-engineering capabilities and anti-AI rubrics independently from the underlying LLM. Sync your skills across 6+ AI IDE environments simultaneously with a single command.
+            PixelCrew orchestrates canonical software-engineering capabilities and anti-AI rubrics independently from the underlying LLM. Sync your skills across 8+ AI IDE environments and agent runtimes simultaneously with a single command.
           </p>
 
           <div className="pt-2 flex justify-center">

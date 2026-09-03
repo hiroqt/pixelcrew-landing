@@ -14,7 +14,9 @@ import {
   GeminiCliIcon, 
   CodexIcon, 
   KiroIcon, 
-  OpenCodeIcon 
+  OpenCodeIcon,
+  GrokIcon,
+  HermesIcon 
 } from '@/components/ui/ToolIcons';
 
 export function Hero() {
@@ -95,7 +97,7 @@ export function Hero() {
             <p className="text-[10px] uppercase tracking-[0.2em] text-slate-600 text-theme-muted mb-3">
               Works with
             </p>
-            <div className="flex items-center justify-center gap-5 sm:gap-6 pt-1">
+            <div className="flex items-center justify-center gap-5 sm:gap-6 pt-1 flex-wrap">
               {[
                 { icon: AntigravityIcon, name: 'Antigravity' },
                 { icon: ClaudeIcon, name: 'Claude Code' },
@@ -104,6 +106,8 @@ export function Hero() {
                 { icon: CodexIcon, name: 'Codex CLI' },
                 { icon: KiroIcon, name: 'Kiro' },
                 { icon: OpenCodeIcon, name: 'OpenCode' },
+                { icon: GrokIcon, name: 'Grok' },
+                { icon: HermesIcon, name: 'Hermes' },
               ].map((tool) => (
                 <div
                   key={tool.name}

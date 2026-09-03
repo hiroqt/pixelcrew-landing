@@ -85,7 +85,7 @@ export const ARCHITECTURE_STAGES: ArchitectureStage[] = [
     id: 'ide_sync',
     title: 'CROSS-IDE SKILL DISTRIBUTOR',
     module: 'src/adapters/registry.js',
-    description: 'Distributes SKILL.md files with YAML frontmatter across 6+ AI IDE directories (.agents, .claude, .cursor, etc.).',
+    description: 'Distributes SKILL.md files with YAML frontmatter across 8+ AI IDE directories (.agents, .claude, .cursor, .grok, etc.).',
     icon: '🚀',
     color: '#ff3344',
     details: ['Sanitizes YAML frontmatter', 'Syncs to all detected IDE providers', 'Dry-run safety validation']

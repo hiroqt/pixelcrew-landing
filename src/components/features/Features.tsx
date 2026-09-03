@@ -441,7 +441,7 @@ export function Features() {
               Multi-IDE Universal Protocol
             </h4>
             <p className="text-xs text-slate-400 text-theme-secondary leading-relaxed">
-              Instant drop-in support across Claude Code, Cursor, Antigravity, Gemini CLI, Kiro, Codex, and OpenCode.
+              Instant drop-in support across Claude Code, Cursor, Antigravity, Gemini CLI, Kiro, Codex, OpenCode, Grok, and Hermes.
             </p>
           </div>
         </div>

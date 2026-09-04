@@ -2,22 +2,113 @@ import { ChangelogRelease } from '@/types/changelog';
 
 export const FALLBACK_RELEASES: ChangelogRelease[] = [
   {
+    id: 'rel-v0.2.5',
+    tagName: 'v0.2.5',
+    version: '0.2.5',
+    name: 'Universal Multi-IDE Scaffolding, Backend Engine & Real-Time Telemetry',
+    summary: 'A major milestone release introducing Universal Multi-IDE Scaffolding across 12+ AI providers, an enterprise-grade Universal Backend Engineering Engine, Autonomous DAG Task Scheduling, Real-Time Token Telemetry with a retro Lo-Fi procedural synthesizer, and the complete 2026 64-Pattern Anti-AI Slop Encyclopedia.',
+    publishedAt: '2026-09-04T14:51:19Z',
+    formattedDate: 'September 4, 2026',
+    relativeTime: 'just now',
+    htmlUrl: 'https://github.com/hiroqt/PixelCrew/releases/tag/v0.2.5',
+    tarballUrl: 'https://github.com/hiroqt/PixelCrew/archive/refs/tags/v0.2.5.tar.gz',
+    zipballUrl: 'https://github.com/hiroqt/PixelCrew/archive/refs/tags/v0.2.5.zip',
+    isLatest: true,
+    isPrerelease: false,
+    author: {
+      username: 'hiroqt',
+      avatarUrl: 'https://avatars.githubusercontent.com/u/117023859?v=4',
+      githubUrl: 'https://github.com/hiroqt'
+    },
+    metrics: [
+      { label: 'AI Provider Environments', value: '12+ Supported' },
+      { label: 'Token Efficiency Ratio', value: '~72% AST Savings' },
+      { label: 'Backend Architecture', value: 'Hexagonal / Clean' }
+    ],
+    changeGroups: [
+      {
+        category: 'feature',
+        label: 'New Capabilities',
+        badgeColor: '#38bdf8',
+        items: [
+          {
+            title: 'Universal Multi-IDE Scaffolding & Cross-IDE Architecture',
+            description: 'One-click squad initialization and skill synchronization for Kiro, Cursor, Antigravity, Claude Code, Grok, Hermes, Codex, OpenCode, Pi, Gemini, and PixelCrew Workspace.'
+          },
+          {
+            title: 'Universal Backend Engineering Engine',
+            description: 'Full support for Clean / Hexagonal Architecture, RFC 7807 problem-details error envelopes, OpenAPI 3.1, gRPC, tRPC, GraphQL DataLoader, and Redis Lua rate limiters.'
+          },
+          {
+            title: 'Autonomous DAG-Based Task Scheduling',
+            description: 'Dynamic Directed Acyclic Graph planner with automated dependency resolution, cycle detection, concurrency batching, and AST contract validation.'
+          },
+          {
+            title: 'Real-Time Token Telemetry & Lo-Fi Procedural Synthesizer',
+            description: 'Live per-agent token tracking with ~72% efficiency ratio, realtime sidechat event streaming, and an in-browser 8-bit procedural audio engine on port 4747.'
+          }
+        ]
+      },
+      {
+        category: 'improvement',
+        label: 'Enhancements & Architecture',
+        badgeColor: '#f59e0b',
+        items: [
+          {
+            title: '2026 64-Pattern Anti-AI Slop Encyclopedia',
+            description: 'Zero-prompt aesthetic directives banning purple/cyan blobs, floating sparkles, monotonous 3-card repetition, and cliché marketing copy.'
+          },
+          {
+            title: 'Unified Command Suite & Reporting Utilities',
+            description: 'Added /recap git diff summaries, /status swarm telemetry, and MarkdownReportBuilder for automated DESIGN.md and PRODUCT.md generation.'
+          },
+          {
+            title: 'Mathematical Fluid Typography',
+            description: 'Enforced CSS clamp() fluid type scales, curated HSL elevation surfaces, and dynamic Bento grid compositions.'
+          }
+        ]
+      },
+      {
+        category: 'fix',
+        label: 'Fixes & Hardening',
+        badgeColor: '#34d399',
+        items: [
+          {
+            title: 'Automated AST Normalization & Prompt Caching',
+            description: 'Pre-compiles context rules into compact AST symbol graphs to eliminate duplicate context and prevent agent loop regressions.'
+          },
+          {
+            title: 'Resilience & Sliding Window Rate Limiting',
+            description: 'Hardened internal server endpoints with Redis Lua token bucket rate limiters, Circuit Breakers, and exponential backoff with jitter.'
+          }
+        ]
+      }
+    ],
+    highlights: [
+      'Universal Multi-IDE scaffolding across 12+ AI providers',
+      'Universal Backend Engineering Engine (Hexagonal, RFC 7807)',
+      'Autonomous DAG-based task scheduling and AST contract validation',
+      'Real-Time token telemetry (~72% savings) & retro lofi synthesizer',
+      '2026 64-pattern Anti-AI slop encyclopedia enforcement'
+    ]
+  },
+  {
     id: 'rel-v0.2.4',
     tagName: 'v0.2.4',
     version: '0.2.4',
     name: 'Dynamic DAG Task Graph & Multi-IDE Scaffolding',
-    summary: 'A landmark release introducing intelligent DAG multi-agent task planning, parallel execution pipelines without cyclic deadlocks, and native scaffolding across 6+ AI developer environments.',
+    summary: 'A landmark release introducing intelligent DAG multi-agent task planning, parallel execution pipelines without cyclic deadlocks, and native scaffolding across AI developer environments.',
     publishedAt: '2026-08-29T18:30:00Z',
     formattedDate: 'August 29, 2026',
     relativeTime: '6 days ago',
     htmlUrl: 'https://github.com/hiroqt/PixelCrew/releases/tag/v0.2.4',
     tarballUrl: 'https://github.com/hiroqt/PixelCrew/archive/refs/tags/v0.2.4.tar.gz',
     zipballUrl: 'https://github.com/hiroqt/PixelCrew/archive/refs/tags/v0.2.4.zip',
-    isLatest: true,
+    isLatest: false,
     isPrerelease: false,
     author: {
       username: 'hiroqt',
-      avatarUrl: 'https://avatars.githubusercontent.com/u/10892015?v=4',
+      avatarUrl: 'https://avatars.githubusercontent.com/u/117023859?v=4',
       githubUrl: 'https://github.com/hiroqt'
     },
     metrics: [
@@ -99,7 +190,7 @@ export const FALLBACK_RELEASES: ChangelogRelease[] = [
     isPrerelease: false,
     author: {
       username: 'hiroqt',
-      avatarUrl: 'https://avatars.githubusercontent.com/u/10892015?v=4',
+      avatarUrl: 'https://avatars.githubusercontent.com/u/117023859?v=4',
       githubUrl: 'https://github.com/hiroqt'
     },
     metrics: [
@@ -166,7 +257,7 @@ export const FALLBACK_RELEASES: ChangelogRelease[] = [
     isPrerelease: false,
     author: {
       username: 'hiroqt',
-      avatarUrl: 'https://avatars.githubusercontent.com/u/10892015?v=4',
+      avatarUrl: 'https://avatars.githubusercontent.com/u/117023859?v=4',
       githubUrl: 'https://github.com/hiroqt'
     },
     metrics: [
@@ -232,7 +323,7 @@ export const FALLBACK_RELEASES: ChangelogRelease[] = [
     isPrerelease: false,
     author: {
       username: 'hiroqt',
-      avatarUrl: 'https://avatars.githubusercontent.com/u/10892015?v=4',
+      avatarUrl: 'https://avatars.githubusercontent.com/u/117023859?v=4',
       githubUrl: 'https://github.com/hiroqt'
     },
     metrics: [

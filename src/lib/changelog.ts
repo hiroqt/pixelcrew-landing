@@ -8,6 +8,7 @@ import { FALLBACK_RELEASES } from '@/data/changelog-fallback';
 const GITHUB_OWNER = 'hiroqt';
 const GITHUB_REPO = 'PixelCrew';
 const REPO_URL = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}`;
+const RAW_CHANGELOG_URL = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/main/CHANGELOG.md`;
 
 interface CacheStore {
   data: ChangelogResponse | null;
@@ -19,7 +20,8 @@ const cache: CacheStore = {
   timestamp: 0,
 };
 
-const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+// 10-second cache TTL for responsive real-time updates while deduplicating simultaneous SSR requests
+const CACHE_TTL_MS = 10 * 1000;
 
 export function formatRelativeTime(dateStr: string): string {
   try {
@@ -60,103 +62,210 @@ export function formatStandardDate(dateStr: string): string {
   }
 }
 
-/**
- * Parse markdown release body into user-friendly ChangeGroups for dynamic releases
- */
-export function parseBodyIntoChangeGroups(body: string | undefined): ChangeGroup[] {
-  if (!body) return [];
+export function parseSectionItems(text: string): { title: string; description: string }[] {
+  const items: { title: string; description: string }[] = [];
+  const lines = text.split('\n');
 
-  const lines = body.split('\n');
-  const features: { title: string; description: string }[] = [];
-  const improvements: { title: string; description: string }[] = [];
-  const fixes: { title: string; description: string }[] = [];
-
-  let currentCategory: 'feature' | 'improvement' | 'fix' = 'feature';
+  let currentTitle = '';
+  let currentDesc = '';
 
   for (const line of lines) {
     const trimmed = line.trim();
-    const lower = trimmed.toLowerCase();
-
-    if (lower.includes('feature') || lower.includes('what\'s new')) {
-      currentCategory = 'feature';
-      continue;
-    } else if (lower.includes('improvement') || lower.includes('performance') || lower.includes('enhancement')) {
-      currentCategory = 'improvement';
-      continue;
-    } else if (lower.includes('fix') || lower.includes('bug') || lower.includes('security')) {
-      currentCategory = 'fix';
-      continue;
-    }
-
-    if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-      const clean = trimmed.substring(2).trim();
-      if (!clean || clean.startsWith('Full Changelog')) continue;
-
-      // Extract title and description if separated by colon or dash
-      let title = clean;
-      let description = '';
-
-      if (clean.includes(':')) {
-        const parts = clean.split(':');
-        title = parts[0].trim();
-        description = parts.slice(1).join(':').trim();
-      } else if (clean.includes(' - ')) {
-        const parts = clean.split(' - ');
-        title = parts[0].trim();
-        description = parts.slice(1).join(' - ').trim();
+    if (trimmed.startsWith('#### ')) {
+      if (currentTitle) {
+        items.push({ title: currentTitle, description: currentDesc || currentTitle });
       }
-
-      if (!description) {
-        description = title;
+      currentTitle = trimmed.replace(/^####\s+/, '').replace(/\*\*/g, '');
+      currentDesc = '';
+    } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+      const clean = trimmed.replace(/^[-*]\s+/, '');
+      const boldMatch = clean.match(/^\*\*([^*]+)\*\*:\s*(.*)$/);
+      
+      if (currentTitle) {
+        // Under a #### heading: capture the first bullet or combine descriptions
+        if (!currentDesc) {
+          currentDesc = boldMatch ? `${boldMatch[1]}: ${boldMatch[2]}` : clean;
+        }
+      } else {
+        // Individual bullet without a subheading
+        if (boldMatch) {
+          items.push({
+            title: boldMatch[1].trim(),
+            description: boldMatch[2].trim()
+          });
+        } else {
+          const colonIdx = clean.indexOf(':');
+          if (colonIdx > 0 && colonIdx < 50) {
+            items.push({
+              title: clean.slice(0, colonIdx).trim(),
+              description: clean.slice(colonIdx + 1).trim()
+            });
+          } else {
+            items.push({
+              title: clean.slice(0, 55),
+              description: clean
+            });
+          }
+        }
       }
-
-      const item = { title, description };
-
-      if (currentCategory === 'feature') features.push(item);
-      else if (currentCategory === 'improvement') improvements.push(item);
-      else fixes.push(item);
+    } else if (currentTitle && trimmed.length > 0 && !trimmed.startsWith('#')) {
+      if (!currentDesc) {
+        currentDesc = trimmed;
+      }
     }
   }
 
-  const groups: ChangeGroup[] = [];
+  if (currentTitle && !items.some(it => it.title === currentTitle)) {
+    items.push({ title: currentTitle, description: currentDesc || currentTitle });
+  }
 
-  if (features.length > 0) {
-    groups.push({
-      category: 'feature',
-      label: 'New Capabilities',
-      badgeColor: '#38bdf8',
-      items: features.slice(0, 5)
+  return items.slice(0, 8);
+}
+
+export function parseMarkdownBody(body: string): {
+  summary: string;
+  highlights: string[];
+  changeGroups: ChangeGroup[];
+} {
+  let summary = '';
+  const highlights: string[] = [];
+  const changeGroups: ChangeGroup[] = [];
+
+  // 1. Highlights: Look for ### Highlights or ### 🌟 Release Highlights
+  const highlightsMatch = body.match(/###\s+[^\n]*Highlights[^\n]*\n([\s\S]*?)(?=\n---\s*\n|\n###\s+|\n##\s+|$)/i);
+  if (highlightsMatch) {
+    const hText = highlightsMatch[1];
+    const lines = hText.split('\n').map(l => l.trim()).filter(Boolean);
+    for (const line of lines) {
+      if (line.startsWith('- ') || line.startsWith('* ')) {
+        highlights.push(line.replace(/^[-*]\s+/, '').replace(/\*\*/g, ''));
+      } else if (!line.startsWith('#') && !summary) {
+        summary = line.replace(/\*\*/g, '');
+      }
+    }
+  }
+
+  // 2. Added / Features (Lookahead uses \n---\s*\n, \n###\s+, or \n##\s+ to avoid cutting off at ####)
+  const addedMatch = body.match(/###\s+[^\n]*(Added|Features)[^\n]*\n([\s\S]*?)(?=\n---\s*\n|\n###\s+|\n##\s+|$)/i);
+  if (addedMatch) {
+    const items = parseSectionItems(addedMatch[2]);
+    if (items.length > 0) {
+      changeGroups.push({
+        category: 'feature',
+        label: 'New Capabilities',
+        badgeColor: '#38bdf8',
+        items
+      });
+    }
+  }
+
+  // 3. Changed / Improvements / Enhancements
+  const changedMatch = body.match(/###\s+[^\n]*(Changed|Improvements|Enhancements|Refactored)[^\n]*\n([\s\S]*?)(?=\n---\s*\n|\n###\s+|\n##\s+|$)/i);
+  if (changedMatch) {
+    const items = parseSectionItems(changedMatch[2]);
+    if (items.length > 0) {
+      changeGroups.push({
+        category: 'improvement',
+        label: 'Enhancements & Architecture',
+        badgeColor: '#f59e0b',
+        items
+      });
+    }
+  }
+
+  // 4. Fixed / Security
+  const fixedMatch = body.match(/###\s+[^\n]*(Fixed|Security)[^\n]*\n([\s\S]*?)(?=\n---\s*\n|\n###\s+|\n##\s+|$)/i);
+  if (fixedMatch) {
+    const items = parseSectionItems(fixedMatch[2]);
+    if (items.length > 0) {
+      changeGroups.push({
+        category: 'fix',
+        label: 'Fixes & Hardening',
+        badgeColor: '#34d399',
+        items
+      });
+    }
+  }
+
+  // 5. Documentation / Benchmarks
+  const docsMatch = body.match(/###\s+[^\n]*(Documentation|Benchmarks)[^\n]*\n([\s\S]*?)(?=\n---\s*\n|\n###\s+|\n##\s+|$)/i);
+  if (docsMatch) {
+    const items = parseSectionItems(docsMatch[2]);
+    if (items.length > 0) {
+      changeGroups.push({
+        category: 'improvement',
+        label: 'Documentation & Benchmarks',
+        badgeColor: '#a78bfa',
+        items
+      });
+    }
+  }
+
+  return { summary, highlights, changeGroups };
+}
+
+/**
+ * Parses full raw CHANGELOG.md markdown from GitHub into structured release entries
+ */
+export function parseRawChangelogMarkdown(markdown: string): ChangelogRelease[] {
+  const releases: ChangelogRelease[] = [];
+  const versionBlocks = markdown.split(/(?=^##\s+\[)/m);
+
+  for (let i = 0; i < versionBlocks.length; i++) {
+    const block = versionBlocks[i];
+    const headerMatch = block.match(/^##\s+\[([0-9.]+)\](?:\s*-\s*([0-9-]+))?/m);
+    if (!headerMatch) continue;
+
+    const version = headerMatch[1];
+    const tagName = `v${version}`;
+    const dateStr = headerMatch[2] || new Date().toISOString().split('T')[0];
+
+    const { summary, highlights, changeGroups } = parseMarkdownBody(block);
+
+    // Check if we have curated metrics in FALLBACK_RELEASES to enrich
+    const fallbackMatch = FALLBACK_RELEASES.find(fb => fb.version === version || fb.tagName === tagName);
+
+    releases.push({
+      id: `rel-${tagName}`,
+      tagName,
+      version,
+      name: fallbackMatch?.name || `Release ${tagName}`,
+      summary: summary || fallbackMatch?.summary || `Official release ${tagName} for Pixel Crew.`,
+      publishedAt: dateStr,
+      formattedDate: formatStandardDate(dateStr),
+      relativeTime: formatRelativeTime(dateStr),
+      htmlUrl: `${REPO_URL}/releases/tag/${tagName}`,
+      tarballUrl: `${REPO_URL}/archive/refs/tags/${tagName}.tar.gz`,
+      zipballUrl: `${REPO_URL}/archive/refs/tags/${tagName}.zip`,
+      isLatest: releases.length === 0,
+      isPrerelease: false,
+      author: {
+        username: 'hiroqt',
+        avatarUrl: 'https://avatars.githubusercontent.com/u/117023859?v=4',
+        githubUrl: 'https://github.com/hiroqt'
+      },
+      metrics: fallbackMatch?.metrics,
+      changeGroups: changeGroups.length > 0 ? changeGroups : (fallbackMatch?.changeGroups || [
+        {
+          category: 'feature',
+          label: 'Release Updates',
+          badgeColor: '#38bdf8',
+          items: [{ title: `Version ${tagName}`, description: summary || 'Release updates published.' }]
+        }
+      ]),
+      highlights: highlights.length > 0 ? highlights : (fallbackMatch?.highlights || [`Version ${tagName} released to repository`])
     });
   }
 
-  if (improvements.length > 0) {
-    groups.push({
-      category: 'improvement',
-      label: 'Enhancements',
-      badgeColor: '#f59e0b',
-      items: improvements.slice(0, 5)
-    });
-  }
-
-  if (fixes.length > 0) {
-    groups.push({
-      category: 'fix',
-      label: 'Fixes & Hardening',
-      badgeColor: '#34d399',
-      items: fixes.slice(0, 5)
-    });
-  }
-
-  return groups;
+  return releases;
 }
 
 interface RawGitHubRelease {
   id: number;
   tag_name: string;
-  name: string | null;
-  body: string | null;
-  published_at: string | null;
-  created_at: string;
+  name: string;
+  body: string;
+  published_at: string;
   html_url: string;
   tarball_url: string;
   zipball_url: string;
@@ -165,7 +274,7 @@ interface RawGitHubRelease {
     login: string;
     avatar_url: string;
     html_url: string;
-  } | null;
+  };
 }
 
 interface RawGitHubTag {
@@ -177,11 +286,12 @@ interface RawGitHubTag {
 }
 
 /**
- * Fetch GitHub releases with clean summary enrichment and fallback resiliency
+ * Fetch GitHub releases with zero-delay real-time synchronization
  */
 export async function getChangelogData(forceRefresh = false): Promise<ChangelogResponse> {
   const now = Date.now();
 
+  // If not forcing refresh and memory cache is fresh within 10s, return cached response
   if (!forceRefresh && cache.data && (now - cache.timestamp < CACHE_TTL_MS)) {
     return {
       ...cache.data,
@@ -202,122 +312,138 @@ export async function getChangelogData(forceRefresh = false): Promise<ChangelogR
   try {
     const fetchOptions: RequestInit = {
       headers,
-      next: { revalidate: 1800 }
+      cache: 'no-store' // Never use stale HTTP cache
     };
 
-    const [releasesRes, tagsRes] = await Promise.allSettled([
-      fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases?per_page=10`, fetchOptions),
-      fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/tags?per_page=10`, fetchOptions)
+    // Parallel fetch: Official GitHub Releases, Raw Authoritative CHANGELOG.md & repository tags
+    const [releasesApiRes, rawChangelogRes, tagsRes] = await Promise.allSettled([
+      fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases?per_page=15`, fetchOptions),
+      fetch(`${RAW_CHANGELOG_URL}?t=${now}`, fetchOptions),
+      fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/tags?per_page=15`, fetchOptions)
     ]);
 
     let releases: ChangelogRelease[] = [];
 
-    // Process Releases
-    if (releasesRes.status === 'fulfilled' && releasesRes.value.ok) {
-      const rawReleases: RawGitHubRelease[] = await releasesRes.value.json();
-      if (Array.isArray(rawReleases) && rawReleases.length > 0) {
-        releases = rawReleases.map((r, index) => {
-          const pubDate = r.published_at || r.created_at;
-          const matchingFallback = FALLBACK_RELEASES.find(fb => fb.tagName === r.tag_name);
+    // 1. Primary Source A: Official GitHub Releases API
+    if (releasesApiRes.status === 'fulfilled' && releasesApiRes.value.ok) {
+      const ghReleases: RawGitHubRelease[] = await releasesApiRes.value.json();
+      if (Array.isArray(ghReleases) && ghReleases.length > 0) {
+        for (const ghRel of ghReleases) {
+          const tagName = ghRel.tag_name;
+          const version = tagName.replace(/^v/, '');
+          const fallbackMatch = FALLBACK_RELEASES.find(fb => fb.version === version || fb.tagName === tagName);
+          const { summary, highlights, changeGroups } = parseMarkdownBody(ghRel.body || '');
 
-          if (matchingFallback) {
-            return {
-              ...matchingFallback,
-              isLatest: index === 0,
-              htmlUrl: r.html_url,
-              tarballUrl: r.tarball_url,
-              zipballUrl: r.zipball_url,
-              publishedAt: pubDate,
-              formattedDate: formatStandardDate(pubDate),
-              relativeTime: formatRelativeTime(pubDate),
-            };
-          }
-
-          const changeGroups = parseBodyIntoChangeGroups(r.body || undefined);
-
-          return {
-            id: String(r.id),
-            tagName: r.tag_name,
-            version: r.tag_name.replace(/^v/, ''),
-            name: r.name || r.tag_name,
-            summary: r.body?.split('\n')[0] || `Official release ${r.tag_name} for Pixel Crew.`,
-            body: r.body || '',
-            publishedAt: pubDate,
-            formattedDate: formatStandardDate(pubDate),
-            relativeTime: formatRelativeTime(pubDate),
-            htmlUrl: r.html_url,
-            tarballUrl: r.tarball_url,
-            zipballUrl: r.zipball_url,
-            isLatest: index === 0,
-            isPrerelease: r.prerelease,
+          releases.push({
+            id: `rel-${ghRel.id || tagName}`,
+            tagName,
+            version,
+            name: ghRel.name || `Release ${tagName}`,
+            summary: summary || fallbackMatch?.summary || `Official release ${tagName} for Pixel Crew.`,
+            publishedAt: ghRel.published_at || new Date().toISOString(),
+            formattedDate: formatStandardDate(ghRel.published_at),
+            relativeTime: formatRelativeTime(ghRel.published_at),
+            htmlUrl: ghRel.html_url || `${REPO_URL}/releases/tag/${tagName}`,
+            tarballUrl: ghRel.tarball_url || `${REPO_URL}/archive/refs/tags/${tagName}.tar.gz`,
+            zipballUrl: ghRel.zipball_url || `${REPO_URL}/archive/refs/tags/${tagName}.zip`,
+            isLatest: releases.length === 0,
+            isPrerelease: ghRel.prerelease || false,
             author: {
-              username: r.author?.login || 'hiroqt',
-              avatarUrl: r.author?.avatar_url || 'https://avatars.githubusercontent.com/u/10892015?v=4',
-              githubUrl: r.author?.html_url || `https://github.com/${r.author?.login || 'hiroqt'}`
+              username: ghRel.author?.login || 'hiroqt',
+              avatarUrl: ghRel.author?.avatar_url || 'https://avatars.githubusercontent.com/u/117023859?v=4',
+              githubUrl: ghRel.author?.html_url || 'https://github.com/hiroqt'
             },
-            changeGroups: changeGroups.length > 0 ? changeGroups : [
+            metrics: fallbackMatch?.metrics,
+            changeGroups: changeGroups.length > 0 ? changeGroups : (fallbackMatch?.changeGroups || [
               {
                 category: 'feature',
-                label: 'Release Highlights',
+                label: 'New Capabilities',
                 badgeColor: '#38bdf8',
-                items: [{ title: 'Version Update', description: `Published version ${r.tag_name} to GitHub.` }]
+                items: [{ title: `Version ${tagName}`, description: summary || 'Release updates published.' }]
               }
-            ],
-            highlights: [r.name || r.tag_name]
-          };
-        });
+            ]),
+            highlights: highlights.length > 0 ? highlights : (fallbackMatch?.highlights || [`Version ${tagName} released`])
+          });
+        }
       }
     }
 
-    // Fallback to tags
-    if (releases.length === 0 && tagsRes.status === 'fulfilled' && tagsRes.value.ok) {
+    // 2. Primary Source B: Parse live authoritative CHANGELOG.md from main branch
+    // Supplements releases if CHANGELOG.md has older versions or richer details
+    if (rawChangelogRes.status === 'fulfilled' && rawChangelogRes.value.ok) {
+      const rawMarkdown = await rawChangelogRes.value.text();
+      const parsedReleases = parseRawChangelogMarkdown(rawMarkdown);
+      
+      if (releases.length === 0) {
+        releases = parsedReleases;
+      } else {
+        // Merge releases from CHANGELOG.md if not in releases API
+        for (const pr of parsedReleases) {
+          if (!releases.some(r => r.tagName === pr.tagName || r.version === pr.version)) {
+            releases.push(pr);
+          }
+        }
+      }
+    }
+
+    // 3. Cross-verify with latest git tags
+    if (tagsRes.status === 'fulfilled' && tagsRes.value.ok) {
       const rawTags: RawGitHubTag[] = await tagsRes.value.json();
       if (Array.isArray(rawTags) && rawTags.length > 0) {
-        releases = rawTags.map((t, index) => {
-          const matchingFallback = FALLBACK_RELEASES.find(fb => fb.tagName === t.name);
+        const latestTag = rawTags[0].name;
+        // If a new tag exists that hasn't been parsed yet, prepend it
+        if (!releases.some(r => r.tagName === latestTag)) {
+          const matchingFallback = FALLBACK_RELEASES.find(fb => fb.tagName === latestTag);
           if (matchingFallback) {
-            return {
-              ...matchingFallback,
-              isLatest: index === 0
-            };
+            releases.unshift({ ...matchingFallback, isLatest: true });
+          } else {
+            releases.unshift({
+              id: `rel-${latestTag}`,
+              tagName: latestTag,
+              version: latestTag.replace(/^v/, ''),
+              name: `Release ${latestTag}`,
+              summary: `Latest release ${latestTag} published to repository.`,
+              publishedAt: new Date().toISOString(),
+              formattedDate: formatStandardDate(new Date().toISOString()),
+              relativeTime: 'just now',
+              htmlUrl: `${REPO_URL}/releases/tag/${latestTag}`,
+              tarballUrl: `${REPO_URL}/archive/refs/tags/${latestTag}.tar.gz`,
+              zipballUrl: `${REPO_URL}/archive/refs/tags/${latestTag}.zip`,
+              isLatest: true,
+              isPrerelease: false,
+              author: {
+                username: 'hiroqt',
+                avatarUrl: 'https://avatars.githubusercontent.com/u/117023859?v=4',
+                githubUrl: 'https://github.com/hiroqt'
+              },
+              changeGroups: [
+                {
+                  category: 'feature',
+                  label: 'Release Highlights',
+                  badgeColor: '#38bdf8',
+                  items: [{ title: `Version ${latestTag}`, description: 'New version published.' }]
+                }
+              ],
+              highlights: [`Version ${latestTag}`]
+            });
           }
-
-          return {
-            id: `tag-${t.name}`,
-            tagName: t.name,
-            version: t.name.replace(/^v/, ''),
-            name: `Release ${t.name}`,
-            summary: `Version ${t.name} published to the main branch.`,
-            publishedAt: new Date().toISOString(),
-            formattedDate: formatStandardDate(new Date().toISOString()),
-            relativeTime: 'recently',
-            htmlUrl: `${REPO_URL}/releases/tag/${t.name}`,
-            tarballUrl: `${REPO_URL}/archive/refs/tags/${t.name}.tar.gz`,
-            zipballUrl: `${REPO_URL}/archive/refs/tags/${t.name}.zip`,
-            isLatest: index === 0,
-            isPrerelease: false,
-            author: {
-              username: 'hiroqt',
-              avatarUrl: 'https://avatars.githubusercontent.com/u/10892015?v=4',
-              githubUrl: 'https://github.com/hiroqt'
-            },
-            changeGroups: [
-              {
-                category: 'feature',
-                label: 'Release Highlights',
-                badgeColor: '#38bdf8',
-                items: [{ title: `Version ${t.name}`, description: 'Tagged release ready for deployment.' }]
-              }
-            ],
-            highlights: [`Tagged version ${t.name}`]
-          };
-        });
+        }
       }
     }
 
+    // Fallback if network was unavailable
     if (releases.length === 0) {
       releases = FALLBACK_RELEASES;
     }
+
+    // Mark only the very first release as latest
+    releases = releases.map((rel, index) => ({
+      ...rel,
+      isLatest: index === 0
+    }));
+
+    const isLive = (releasesApiRes.status === 'fulfilled' && releasesApiRes.value.ok) ||
+                   (rawChangelogRes.status === 'fulfilled' && rawChangelogRes.value.ok);
 
     const response: ChangelogResponse = {
       repository: `${GITHUB_OWNER}/${GITHUB_REPO}`,
@@ -325,7 +451,7 @@ export async function getChangelogData(forceRefresh = false): Promise<ChangelogR
       releases,
       lastUpdated: new Date().toISOString(),
       cached: false,
-      source: (releasesRes.status === 'fulfilled' && releasesRes.value.ok) ? 'live' : 'fallback'
+      source: isLive ? 'live' : 'fallback'
     };
 
     cache.data = response;
@@ -333,7 +459,7 @@ export async function getChangelogData(forceRefresh = false): Promise<ChangelogR
 
     return response;
   } catch (error) {
-    console.warn('[PixelCrew Changelog] Error loading releases, using fallback:', error);
+    console.warn('[PixelCrew Changelog] Live fetch failed, using fallback:', error);
 
     return {
       repository: `${GITHUB_OWNER}/${GITHUB_REPO}`,

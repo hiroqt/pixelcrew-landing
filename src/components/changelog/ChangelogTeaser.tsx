@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { 
   Tag, 
@@ -9,29 +10,97 @@ import {
   CheckCircle2,
   Calendar
 } from 'lucide-react';
+import { ChangelogResponse } from '@/types/changelog';
 import { FALLBACK_RELEASES } from '@/data/changelog-fallback';
 import { playChiptuneSound } from '@/lib/pixelcrew';
 
-export function ChangelogTeaser() {
-  const latestRelease = FALLBACK_RELEASES[0];
-  const priorReleases = FALLBACK_RELEASES.slice(1, 3);
+interface ChangelogTeaserProps {
+  initialData?: ChangelogResponse;
+}
+
+export function ChangelogTeaser({ initialData }: ChangelogTeaserProps) {
+  const [data, setData] = useState<ChangelogResponse>(() => initialData || {
+    repository: 'hiroqt/PixelCrew',
+    repoUrl: 'https://github.com/hiroqt/PixelCrew',
+    releases: FALLBACK_RELEASES,
+    lastUpdated: new Date().toISOString(),
+    cached: true,
+    source: 'fallback'
+  });
+
+  // Real-time synchronization on both local and production
+  useEffect(() => {
+    let isMounted = true;
+
+    async function syncRealtime() {
+      try {
+        const res = await fetch(`/api/changelog?refresh=true&t=${Date.now()}`);
+        if (res.ok && isMounted) {
+          const fresh: ChangelogResponse = await res.json();
+          if (fresh.releases && fresh.releases.length > 0) {
+            setData(fresh);
+          }
+        }
+      } catch {
+        // Retain current data gracefully if network is temporarily unavailable
+      }
+    }
+
+    syncRealtime();
+
+    // Auto-sync every 45s while user stays on landing page
+    const interval = setInterval(syncRealtime, 45000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  const latestRelease = data.releases[0] || FALLBACK_RELEASES[0];
+  const priorReleases = data.releases.slice(1, 3);
+
+  // Dynamic capabilities extractor
+  const keyCapabilities = useMemo(() => {
+    const fromFirstGroup = latestRelease.changeGroups?.[0]?.items?.slice(0, 3);
+    if (fromFirstGroup && fromFirstGroup.length > 0) return fromFirstGroup;
+
+    if (latestRelease.highlights && latestRelease.highlights.length > 0) {
+      return latestRelease.highlights.slice(0, 3).map((h, i) => ({
+        title: `Capability ${i + 1}`,
+        description: h
+      }));
+    }
+
+    return [
+      { title: 'Release Update', description: latestRelease.summary }
+    ];
+  }, [latestRelease]);
 
   return (
     <section className="py-20 bg-[var(--panel-bg)] border-t border-b border-[var(--panel-border)] relative overflow-hidden transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         
-        {/* Header with Version Pill */}
+        {/* Header with Version Pill & Real-time Live Badge */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-3">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#111523] border border-[#1e263c] font-pixel text-[10px] text-[#00f0ff] shadow-[2px_2px_0px_#000]">
-              <Sparkles className="w-3 h-3 text-[#00f0ff]" />
-              <span>[ VERSION HISTORY // LATEST RELEASES ]</span>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#111523] border border-[#1e263c] font-pixel text-[10px] text-[#00f0ff] shadow-[2px_2px_0px_#000]">
+                <Sparkles className="w-3 h-3 text-[#00f0ff]" />
+                <span>[ VERSION HISTORY // LATEST RELEASES ]</span>
+              </div>
+
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-[#00ff88]/10 border border-[#00ff88]/30 font-mono text-[10px] text-[#00ff88] rounded-full">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#00ff88] animate-pulse" />
+                <span>LIVE SYNCED WITH GITHUB</span>
+              </div>
             </div>
+
             <h2 className="text-2xl sm:text-4xl font-extrabold font-display uppercase tracking-tight text-white text-theme-primary">
               WHAT&apos;S NEW IN PIXEL CREW
             </h2>
             <p className="text-slate-300 text-theme-secondary text-sm sm:text-base max-w-xl leading-relaxed">
-              Explore the latest capabilities, architectural milestones, and reliability improvements in the Pixel Crew swarm.
+              Explore the latest capabilities, architectural milestones, and reliability improvements synced directly from GitHub.
             </p>
           </div>
 
@@ -81,12 +150,24 @@ export function ChangelogTeaser() {
                 {latestRelease.summary}
               </p>
 
+              {/* Metrics preview if present */}
+              {latestRelease.metrics && latestRelease.metrics.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 font-mono text-xs pt-1">
+                  {latestRelease.metrics.map((m, idx) => (
+                    <div key={idx} className="bg-[#111523] border border-[#1e263c] px-3 py-2 rounded">
+                      <span className="text-[10px] text-slate-400 block">{m.label}</span>
+                      <span className="text-white font-bold text-xs">{m.value}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <div className="space-y-2 pt-1">
                 <span className="font-mono text-[11px] uppercase tracking-wider text-slate-400 font-bold block">
                   Key Capabilities Added:
                 </span>
                 <ul className="space-y-2 font-sans text-xs sm:text-sm text-slate-200">
-                  {latestRelease.changeGroups[0]?.items.slice(0, 3).map((item, i) => (
+                  {keyCapabilities.map((item, i) => (
                     <li key={i} className="flex items-start gap-2 bg-[#111523] p-2.5 rounded border border-[#1e263c]">
                       <CheckCircle2 className="w-4 h-4 text-[#34d399] shrink-0 mt-0.5" />
                       <span className="leading-snug">

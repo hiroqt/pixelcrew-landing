@@ -1,18 +1,18 @@
 'use client';
 
-import { useState, useMemo, useTransition } from 'react';
+import { useState, useMemo, useTransition, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   ExternalLink, 
   RotateCcw, 
   Search, 
   Download, 
-  Sparkles,
-  Zap,
-  ShieldCheck,
-  Calendar,
-  Layers,
-  Check
+  Sparkles, 
+  Zap, 
+  ShieldCheck, 
+  Calendar, 
+  Layers, 
+  Check 
 } from 'lucide-react';
 import { ChangelogResponse } from '@/types/changelog';
 import { FALLBACK_RELEASES } from '@/data/changelog-fallback';
@@ -37,6 +37,28 @@ export function ChangelogView({ initialData }: ChangelogViewProps) {
   const [selectedVersion, setSelectedVersion] = useState<string>('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [, startTransition] = useTransition();
+
+  // Background real-time sync on mount
+  useEffect(() => {
+    let isMounted = true;
+    async function syncRealtime() {
+      try {
+        const res = await fetch(`/api/changelog?refresh=true&t=${Date.now()}`);
+        if (res.ok && isMounted) {
+          const freshData: ChangelogResponse = await res.json();
+          if (freshData.releases && freshData.releases.length > 0) {
+            startTransition(() => {
+              setData(freshData);
+            });
+          }
+        }
+      } catch {
+        // Keep current data
+      }
+    }
+    syncRealtime();
+    return () => { isMounted = false; };
+  }, []);
 
   // Client-side refresh fetcher
   const handleRefresh = async () => {

@@ -39,6 +39,12 @@ export function Navbar() {
           >
             Docs
           </Link>
+          <Link
+            href="/changelog"
+            className="text-xs font-medium text-slate-400 hover:text-white text-theme-secondary transition-colors hidden sm:block"
+          >
+            Changelog
+          </Link>
           <AudioToggle />
           <ThemeToggle />
           <a

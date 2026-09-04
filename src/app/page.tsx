@@ -5,6 +5,7 @@ import { Hero } from '@/components/hero/Hero';
 import { ProblemSolution } from '@/components/home/ProblemSolution';
 import { Features } from '@/components/features/Features';
 import { CommandShowcase } from '@/components/commands/CommandShowcase';
+import { ChangelogTeaser } from '@/components/changelog/ChangelogTeaser';
 import { Footer } from '@/components/ui/Footer';
 
 export default function Home() {
@@ -16,6 +17,7 @@ export default function Home() {
         <ProblemSolution />
         <Features />
         <CommandShowcase />
+        <ChangelogTeaser />
       </main>
       <Footer />
     </div>

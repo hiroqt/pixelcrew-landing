@@ -44,6 +44,12 @@ export function Footer() {
             >
               Docs
             </Link>
+            <Link
+              href="/changelog"
+              className="text-slate-400 hover:text-white text-theme-secondary hover:text-theme-primary transition-colors"
+            >
+              Changelog
+            </Link>
             <a
               href="#commands"
               className="text-slate-400 hover:text-white text-theme-secondary hover:text-theme-primary transition-colors"
